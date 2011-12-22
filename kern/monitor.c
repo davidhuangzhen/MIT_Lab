@@ -15,7 +15,7 @@
 
 
 struct Command {
-	const char *name;
+	const char *name;	
 	const char *desc;
 	// return -1 to force monitor to exit
 	int (*func)(int argc, char** argv, struct Trapframe* tf);
@@ -24,6 +24,7 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "backtrace", "backtrace the function of the stack", mon_backtrace},
 };
 #define NCOMMANDS (sizeof(commands)/sizeof(commands[0]))
 
@@ -60,6 +61,21 @@ int
 mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 {
 	// Your code here.
+	uint32_t p;
+	int temp;
+	struct Eipdebuginfo info;
+	p = read_ebp();
+	cprintf("Stack backtrace:\n");
+	do{
+		cprintf("  ebp %x eip %x args", p,*((uint32_t*)p+1));
+			for(temp=2;temp<7;temp++)
+			{		
+				cprintf(" %8.0x",*((uint32_t*)p+temp));
+			}
+			debuginfo_eip(*((uint32_t*)p+1), &info);
+			cprintf("\n      %s:%d:  %.*s+%d\n",info.eip_file,info.eip_line,info.eip_fn_namelen,info.eip_fn_name,*((uint32_t*)p+1)-info.eip_fn_addr);
+			p = *((uint32_t*)p);
+	}while(p!=0);
 	return 0;
 }
 
